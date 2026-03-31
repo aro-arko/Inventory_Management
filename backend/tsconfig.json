@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "./src",
+    "outDir": "./dist",
+    // Environment Settings
+    "module": "commonjs",
+    "target": "es2020",
+    // Node.js types
+    "lib": ["es2020"],
+    "types": ["node"],
+    // Module resolution
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    // Other Outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    // Strict Options
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  }
+}
