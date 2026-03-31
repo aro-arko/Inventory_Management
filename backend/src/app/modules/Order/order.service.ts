@@ -3,6 +3,9 @@ import AppError from '../../errors/AppError';
 import { Product } from '../Product/product.model';
 import { TOrder } from './order.interface';
 import { Order } from './order.model';
+import { ActivityLogService } from '../ActivityLog/activityLog.service';
+import QueryBuilder from '../../builder/QueryBuilder';
+
 
 const createOrderIntoDB = async (payload: Partial<TOrder>) => {
   const { customerName, products, status } = payload;
@@ -12,13 +15,23 @@ const createOrderIntoDB = async (payload: Partial<TOrder>) => {
   }
 
   let calculatedTotalPrice = 0;
-
   const productDocs = [];
+  const processedProducts = new Set();
 
   for (const item of products) {
+    const productIdStr = item.product.toString();
+    if (processedProducts.has(productIdStr)) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'This product is already added to the order.');
+    }
+    processedProducts.add(productIdStr);
+
     const productItem = await Product.findById(item.product);
     if (!productItem) {
       throw new AppError(httpStatus.NOT_FOUND, `Product with ID ${item.product} not found`);
+    }
+
+    if (productItem.status !== 'Active') {
+      throw new AppError(httpStatus.BAD_REQUEST, 'This product is currently unavailable.');
     }
 
     if (item.quantity <= 0) {
@@ -40,11 +53,17 @@ const createOrderIntoDB = async (payload: Partial<TOrder>) => {
   }
 
   for (const item of productDocs) {
+    const dropsBelowThreshold = item.doc.stockQuantity >= item.doc.minimumStockThreshold && (item.doc.stockQuantity - item.requestedQuantity) < item.doc.minimumStockThreshold;
+
     item.doc.stockQuantity -= item.requestedQuantity;
     if (item.doc.stockQuantity === 0) {
       item.doc.status = 'Out of Stock';
     }
     await item.doc.save();
+
+    if (dropsBelowThreshold) {
+      ActivityLogService.logAction(`Product "${item.doc.name}" added to Restock Queue`);
+    }
   }
 
   const result = await Order.create({
@@ -54,6 +73,8 @@ const createOrderIntoDB = async (payload: Partial<TOrder>) => {
     status: status || 'Pending',
   });
 
+  ActivityLogService.logAction(`Order #${result._id.toString().slice(-4)} created by user`);
+
   return result;
 };
 
@@ -62,15 +83,51 @@ const updateOrderStatusInDB = async (id: string, status: string) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'Please use the cancel order endpoint to cancel an order and restore stock');
   }
 
-  const result = await Order.findByIdAndUpdate(
-    id,
-    { status },
-    { new: true, runValidators: true }
-  );
-  if (!result) {
+  const order = await Order.findById(id);
+  if (!order) {
     throw new AppError(httpStatus.NOT_FOUND, 'Order not found');
   }
-  return result;
+
+  if (order.status === 'Cancelled' && status !== 'Cancelled') {
+    const productDocs = [];
+
+    for (const item of order.products) {
+      const productItem = await Product.findById(item.product);
+      if (!productItem) {
+        throw new AppError(httpStatus.NOT_FOUND, `Product with ID ${item.product} not found`);
+      }
+
+      if (productItem.status !== 'Active') {
+        throw new AppError(httpStatus.BAD_REQUEST, 'This product is currently unavailable.');
+      }
+
+      if (item.quantity > productItem.stockQuantity) {
+        throw new AppError(
+          httpStatus.BAD_REQUEST,
+          `Cannot reactivate order. Only ${productItem.stockQuantity} items available in stock for ${productItem.name}.`
+        );
+      }
+      productDocs.push({
+        doc: productItem,
+        requestedQuantity: item.quantity
+      });
+    }
+
+    for (const item of productDocs) {
+      item.doc.stockQuantity -= item.requestedQuantity;
+      if (item.doc.stockQuantity === 0) {
+        item.doc.status = 'Out of Stock';
+      }
+      await item.doc.save();
+    }
+  }
+
+  order.status = status as 'Pending' | 'Confirmed' | 'Shipped' | 'Delivered' | 'Cancelled';
+  await order.save();
+
+  ActivityLogService.logAction(`Order #${order._id.toString().slice(-4)} marked as ${status}`);
+
+  return order;
 };
 
 const cancelOrderInDB = async (id: string) => {
@@ -98,31 +155,40 @@ const cancelOrderInDB = async (id: string) => {
   order.status = 'Cancelled';
   await order.save();
 
+  ActivityLogService.logAction(`Order #${order._id.toString().slice(-4)} cancelled`);
+
   return order;
 };
 
-const getAllOrdersFromDB = async (query: Record<string, unknown>) => {
-  const filter: Record<string, unknown> = { isDeleted: false };
 
-  if (query.status) {
-    filter.status = query.status;
-  }
+const getAllOrdersFromDB = async (query: Record<string, unknown>) => {
+  const baseFilter: Record<string, unknown> = { isDeleted: false };
 
   if (query.date && typeof query.date === 'string') {
     const startDate = new Date(query.date);
     const endDate = new Date(query.date);
     endDate.setUTCHours(23, 59, 59, 999);
-    filter.createdAt = {
+    baseFilter.createdAt = {
       $gte: startDate,
       $lte: endDate,
     };
+    delete query.date;
   }
 
-  const result = await Order.find(filter)
-    .populate('products.product')
-    .sort('-createdAt');
+  const orderQuery = new QueryBuilder(
+    Order.find(baseFilter).populate('products.product'),
+    query
+  )
+    .search(['customerName'])
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
 
-  return result;
+  const result = await orderQuery.modelQuery;
+  const meta = await orderQuery.countTotal();
+
+  return { meta, result };
 };
 
 export const OrderServices = {
