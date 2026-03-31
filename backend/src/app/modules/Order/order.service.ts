@@ -13,7 +13,8 @@ const createOrderIntoDB = async (payload: Partial<TOrder>) => {
 
   let calculatedTotalPrice = 0;
 
-  // Validate products and calculate total price
+  const productDocs = [];
+
   for (const item of products) {
     const productItem = await Product.findById(item.product);
     if (!productItem) {
@@ -24,7 +25,26 @@ const createOrderIntoDB = async (payload: Partial<TOrder>) => {
       throw new AppError(httpStatus.BAD_REQUEST, 'Product quantity must be greater than zero');
     }
 
+    if (item.quantity > productItem.stockQuantity) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        `Only ${productItem.stockQuantity} items available in stock for ${productItem.name}.`
+      );
+    }
+
     calculatedTotalPrice += productItem.price * item.quantity;
+    productDocs.push({
+      doc: productItem,
+      requestedQuantity: item.quantity
+    });
+  }
+
+  for (const item of productDocs) {
+    item.doc.stockQuantity -= item.requestedQuantity;
+    if (item.doc.stockQuantity === 0) {
+      item.doc.status = 'Out of Stock';
+    }
+    await item.doc.save();
   }
 
   const result = await Order.create({
@@ -38,6 +58,10 @@ const createOrderIntoDB = async (payload: Partial<TOrder>) => {
 };
 
 const updateOrderStatusInDB = async (id: string, status: string) => {
+  if (status === 'Cancelled') {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Please use the cancel order endpoint to cancel an order and restore stock');
+  }
+
   const result = await Order.findByIdAndUpdate(
     id,
     { status },
@@ -50,25 +74,40 @@ const updateOrderStatusInDB = async (id: string, status: string) => {
 };
 
 const cancelOrderInDB = async (id: string) => {
-  const result = await Order.findByIdAndUpdate(
-    id,
-    { status: 'Cancelled' },
-    { new: true, runValidators: true }
-  );
-  if (!result) {
+  const order = await Order.findById(id);
+
+  if (!order) {
     throw new AppError(httpStatus.NOT_FOUND, 'Order not found');
   }
-  return result;
+
+  if (order.status === 'Cancelled') {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Order is already cancelled');
+  }
+
+  for (const item of order.products) {
+    const productItem = await Product.findById(item.product);
+    if (productItem) {
+      productItem.stockQuantity += item.quantity;
+      if (productItem.status === 'Out of Stock' && productItem.stockQuantity > 0) {
+        productItem.status = 'Active';
+      }
+      await productItem.save();
+    }
+  }
+
+  order.status = 'Cancelled';
+  await order.save();
+
+  return order;
 };
 
 const getAllOrdersFromDB = async (query: Record<string, unknown>) => {
   const filter: Record<string, unknown> = { isDeleted: false };
-  
+
   if (query.status) {
     filter.status = query.status;
   }
 
-  // Handle date formatting if provided (assuming query.date is "YYYY-MM-DD")
   if (query.date && typeof query.date === 'string') {
     const startDate = new Date(query.date);
     const endDate = new Date(query.date);
@@ -82,7 +121,7 @@ const getAllOrdersFromDB = async (query: Record<string, unknown>) => {
   const result = await Order.find(filter)
     .populate('products.product')
     .sort('-createdAt');
-    
+
   return result;
 };
 

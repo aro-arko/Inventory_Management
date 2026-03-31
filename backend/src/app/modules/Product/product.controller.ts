@@ -25,7 +25,33 @@ const getAllProducts = catchAsync(async (req, res) => {
   });
 });
 
+const getRestockQueue = catchAsync(async (req, res) => {
+  const result = await ProductServices.getRestockQueueFromDB();
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Restock queue retrieved successfully',
+    data: result,
+  });
+});
+
+const restockProduct = catchAsync(async (req, res) => {
+  const id = req.params.id as string;
+  const { quantityToAdd } = req.body;
+  const result = await ProductServices.restockProductInDB(id, quantityToAdd);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Product restocked successfully',
+    data: result,
+  });
+});
+
 export const ProductControllers = {
   createProduct,
   getAllProducts,
+  getRestockQueue,
+  restockProduct,
 };

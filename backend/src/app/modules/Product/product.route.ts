@@ -16,4 +16,13 @@ router.post(
 
 router.get('/', auth(USER_ROLE.admin, USER_ROLE.manager), ProductControllers.getAllProducts);
 
+router.get('/restock-queue', auth(USER_ROLE.admin, USER_ROLE.manager), ProductControllers.getRestockQueue);
+
+router.patch(
+  '/:id/restock',
+  auth(USER_ROLE.admin, USER_ROLE.manager),
+  validateRequest(ProductValidations.restockValidationSchema),
+  ProductControllers.restockProduct,
+);
+
 export const ProductRoutes = router;

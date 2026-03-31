@@ -14,6 +14,13 @@ const createProductValidationSchema = z.object({
   }),
 });
 
+const restockValidationSchema = z.object({
+  body: z.object({
+    quantityToAdd: z.number().int().positive('Quantity to add must be a positive integer'),
+  }),
+});
+
 export const ProductValidations = {
   createProductValidationSchema,
+  restockValidationSchema,
 };
