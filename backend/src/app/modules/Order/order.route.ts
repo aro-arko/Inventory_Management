@@ -9,11 +9,12 @@ const router = express.Router();
 
 router.post(
   '/',
+  auth(USER_ROLE.admin, USER_ROLE.manager),
   validateRequest(OrderValidations.createOrderValidationSchema),
   OrderControllers.createOrder,
 );
 
-router.get('/', OrderControllers.getAllOrders);
+router.get('/', auth(USER_ROLE.admin, USER_ROLE.manager), OrderControllers.getAllOrders);
 
 router.patch(
   '/:id/status',
