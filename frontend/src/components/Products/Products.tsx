@@ -117,6 +117,7 @@ const Products = () => {
 
     useEffect(() => {
         void fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, debouncedSearch, selectedCategory]);
 
     // Reset pagination when filters change

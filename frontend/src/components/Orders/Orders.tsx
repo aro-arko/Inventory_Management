@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Fragment } from "react";
 import { getAllOrders, createOrder, updateOrderStatus, cancelOrder } from "@/services/OrderService";
 import { getAllProducts } from "@/services/ProductService";
 import {
@@ -33,6 +33,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { OrderProductDropdown } from "./OrderProductDropdown";
 
 const orderSchema = z.object({
     customerName: z.string().min(2, "Customer name is required"),
@@ -73,6 +74,7 @@ const Orders = () => {
     const [page, setPage] = useState(1);
     const [limit] = useState(10);
     const [meta, setMeta] = useState<any>(null);
+    const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
     const {
         register,
@@ -113,7 +115,7 @@ const Orders = () => {
 
             const [orderRes, prodRes] = await Promise.all([
                 getAllOrders(query),
-                getAllProducts()
+                getAllProducts({ limit: 1000 })
             ]);
 
             if (orderRes.success) {
@@ -137,6 +139,7 @@ const Orders = () => {
 
     useEffect(() => {
         void fetchData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, debouncedSearch, statusFilter, selectedDate]);
 
     // Reset pagination when filters change
@@ -284,90 +287,141 @@ const Orders = () => {
                                 ) : orders.length > 0 ? (
                                     orders.map((order) => {
                                         const StatusIcon = statusIcons[order.status] || Info;
+                                        const isExpanded = expandedOrderId === order._id;
+
                                         return (
-                                            <tr key={order._id} className="group hover:bg-slate-50 transition-colors">
-                                                <td className="px-6 py-5">
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-slate-800">#{order._id.slice(-6).toUpperCase()}</span>
-                                                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">{new Date(order.createdAt).toLocaleDateString()}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-slate-500 font-medium text-sm">
-                                                            <User size={14} className="text-slate-300" />
-                                                            {order.customerName}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-5">
-                                                    <div className="flex -space-x-3">
-                                                        {order.products.slice(0, 3).map((p: any, i: number) => (
-                                                            <div key={i} className="w-9 h-9 rounded-xl bg-blue-600 border-2 border-white flex items-center justify-center text-white text-[10px] font-bold shadow-sm" title={p.product?.name}>
-                                                                {p.quantity}x
+                                            <Fragment key={order._id}>
+                                                <tr className={cn(
+                                                    "group transition-all duration-300",
+                                                    isExpanded ? "bg-blue-50/50" : "hover:bg-slate-50"
+                                                )}>
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-slate-800">#{order._id.slice(-6).toUpperCase()}</span>
+                                                                <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">{new Date(order.createdAt).toLocaleDateString()}</span>
                                                             </div>
-                                                        ))}
-                                                        {order.products.length > 3 && (
-                                                            <div className="w-9 h-9 rounded-xl bg-slate-100 border-2 border-white flex items-center justify-center text-slate-400 text-[10px] font-bold">
-                                                                +{order.products.length - 3}
+                                                            <div className="flex items-center gap-2 text-slate-500 font-medium text-sm">
+                                                                <User size={14} className="text-slate-300" />
+                                                                {order.customerName}
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-5">
-                                                    <p className="font-bold text-slate-800">${order.totalPrice.toLocaleString()}</p>
-                                                </td>
-                                                <td className="px-6 py-5">
-                                                    <span className={cn(
-                                                        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider ring-1",
-                                                        statusColors[order.status]
-                                                    )}>
-                                                        <StatusIcon size={12} />
-                                                        {order.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-5 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        {order.status === "Pending" && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-8 text-blue-600 hover:bg-blue-50 font-bold px-3 text-xs gap-1.5"
-                                                                onClick={() => handleUpdateStatus(order._id, "Confirmed")}
-                                                            >
-                                                                Confirm <ArrowRight size={12} />
-                                                            </Button>
-                                                        )}
-                                                        {order.status === "Confirmed" && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-8 text-purple-600 hover:bg-purple-50 font-bold px-3 text-xs gap-1.5"
-                                                                onClick={() => handleUpdateStatus(order._id, "Shipped")}
-                                                            >
-                                                                Ship <Truck size={12} />
-                                                            </Button>
-                                                        )}
-                                                        {order.status === "Shipped" && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-8 text-emerald-600 hover:bg-emerald-50 font-bold px-3 text-xs gap-1.5"
-                                                                onClick={() => handleUpdateStatus(order._id, "Delivered")}
-                                                            >
-                                                                Deliver <Package size={12} />
-                                                            </Button>
-                                                        )}
-                                                        {order.status !== "Cancelled" && order.status !== "Delivered" && (
-                                                            <button
-                                                                onClick={() => handleCancel(order._id)}
-                                                                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                                                title="Cancel Order"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <OrderProductDropdown
+                                                            order={order}
+                                                            isOpen={isExpanded}
+                                                            onToggle={() => setExpandedOrderId(isExpanded ? null : order._id)}
+                                                        />
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <p className="font-bold text-slate-800">${order.totalPrice.toLocaleString()}</p>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <span className={cn(
+                                                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider ring-1",
+                                                            statusColors[order.status]
+                                                        )}>
+                                                            <StatusIcon size={12} />
+                                                            {order.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-right">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            {order.status === "Pending" && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-8 text-blue-600 hover:bg-blue-50 font-bold px-3 text-xs gap-1.5"
+                                                                    onClick={() => handleUpdateStatus(order._id, "Confirmed")}
+                                                                >
+                                                                    Confirm <ArrowRight size={12} />
+                                                                </Button>
+                                                            )}
+                                                            {order.status === "Confirmed" && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-8 text-purple-600 hover:bg-purple-50 font-bold px-3 text-xs gap-1.5"
+                                                                    onClick={() => handleUpdateStatus(order._id, "Shipped")}
+                                                                >
+                                                                    Ship <Truck size={12} />
+                                                                </Button>
+                                                            )}
+                                                            {order.status === "Shipped" && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-8 text-emerald-600 hover:bg-emerald-50 font-bold px-3 text-xs gap-1.5"
+                                                                    onClick={() => handleUpdateStatus(order._id, "Delivered")}
+                                                                >
+                                                                    Deliver <Package size={12} />
+                                                                </Button>
+                                                            )}
+                                                            {order.status !== "Cancelled" && order.status !== "Delivered" && (
+                                                                <button
+                                                                    onClick={() => handleCancel(order._id)}
+                                                                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                                    title="Cancel Order"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                                {/* Expanding Sub-row */}
+                                                {isExpanded && (
+                                                    <tr className="bg-white">
+                                                        <td colSpan={5} className="px-6 py-0 border-b border-blue-50/50">
+                                                            <div className="py-4 animate-in slide-in-from-top-3 duration-300">
+                                                                <div className="bg-slate-50/40 rounded-2xl p-4 border border-slate-100 shadow-inner">
+                                                                    <div className="flex items-center justify-between mb-3 px-1">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <ShoppingCart className="text-blue-500" size={14} />
+                                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fulfillment Items</span>
+                                                                        </div>
+                                                                        <span className="text-[9px] font-black text-blue-600 bg-white border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">Verified Content</span>
+                                                                    </div>
+
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                                                        {order.products.map((p: any, i: number) => (
+                                                                            <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 hover:border-blue-200 transition-all hover:shadow-lg hover:shadow-blue-100/10 group">
+                                                                                <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                                                                                    {p.quantity}x
+                                                                                </div>
+                                                                                <div className="flex-1 min-w-0">
+                                                                                    <p className="text-xs font-bold text-slate-700 truncate mb-0.5">
+                                                                                        {p.product?.name || "Unknown Product"}
+                                                                                    </p>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase">
+                                                                                            ${(p.product?.price || 0).toLocaleString()} / unit
+                                                                                        </span>
+                                                                                        <div className="w-1 h-1 rounded-full bg-slate-200" />
+                                                                                        <span className="text-[9px] font-black font-mono text-blue-600">
+                                                                                            SUB: ${((p.product?.price || 0) * (p.quantity || 0)).toLocaleString()}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+
+                                                                    <div className="mt-4 pt-3 border-t border-slate-100/60 flex items-center justify-between px-1">
+                                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider italic">Validated fulfillment order for {order.customerName}</p>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[10px] font-bold text-slate-400">TOTAL:</span>
+                                                                            <span className="text-lg font-black text-slate-900 font-mono tracking-tighter">${order.totalPrice.toLocaleString()}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </Fragment>
                                         );
                                     })
                                 ) : (
@@ -487,7 +541,7 @@ const Orders = () => {
                                         </Button>
                                     </div>
 
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 max-h-[450px] overflow-y-auto pr-3 -mr-3 custom-scrollbar py-2">
                                         {fields.map((field, index) => {
                                             const selectedPid = watchedProducts[index]?.product;
                                             const selectedProd = products.find(p => p._id === selectedPid);
@@ -506,10 +560,14 @@ const Orders = () => {
                                                             </div>
                                                         </div>
 
-                                                        <div className="md:col-span-6 space-y-2">
+                                                        <div className="md:col-span-6 space-y-1.5">
+                                                            <div className="flex items-center gap-2 ml-1 mb-1">
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Product</span>
+                                                                {isDuplicate && <span className="text-[9px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded flex items-center gap-1"><AlertTriangle size={8} /> Duplicate</span>}
+                                                            </div>
                                                             <select
                                                                 className={cn(
-                                                                    "w-full h-12 bg-white border-transparent rounded-2xl px-4 outline-none transition-all font-semibold text-slate-700 border-2",
+                                                                    "w-full h-11 bg-white border-transparent rounded-2xl px-4 outline-none transition-all font-semibold text-slate-700 border-2 shadow-sm",
                                                                     errors.products?.[index]?.product ? "border-red-300" : isDuplicate ? "border-amber-400" : "border-white"
                                                                 )}
                                                                 {...register(`products.${index}.product` as const)}
@@ -526,34 +584,46 @@ const Orders = () => {
                                                                     </option>
                                                                 ))}
                                                             </select>
-                                                            {isDuplicate && <p className="text-[10px] text-amber-600 font-bold ml-1 flex items-center gap-1"><AlertTriangle size={10} /> Already added in this order</p>}
                                                         </div>
 
-                                                        <div className="md:col-span-3 space-y-2">
+                                                        <div className="md:col-span-2 space-y-1.5">
+                                                            <div className="flex items-center gap-2 ml-1 mb-1">
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Qty</span>
+                                                            </div>
                                                             <div className="relative">
                                                                 <Input
                                                                     type="number"
                                                                     className={cn(
-                                                                        "h-12 bg-white border-transparent rounded-2xl text-center font-bold px-8 border-2",
+                                                                        "h-11 bg-white border-transparent rounded-2xl text-center font-bold border-2 shadow-sm",
                                                                         isStockExceeded ? "border-red-400 text-red-600" : "border-white"
                                                                     )}
                                                                     {...register(`products.${index}.quantity` as const)}
                                                                 />
-                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-[10px] uppercase">Qty</span>
                                                             </div>
-                                                            {isStockExceeded && <p className="text-[10px] text-red-600 font-bold ml-1 flex items-center gap-1"><BadgeAlert size={10} /> Only {availableStock} left</p>}
+                                                            {selectedPid && (
+                                                                <p className={cn(
+                                                                    "text-[10px] font-bold ml-1 flex items-center gap-1",
+                                                                    isStockExceeded ? "text-red-600" : "text-slate-400"
+                                                                )}>
+                                                                    {isStockExceeded ? <BadgeAlert size={10} /> : <CheckCircle2 size={10} className="text-emerald-500" />}
+                                                                    {availableStock} Available
+                                                                </p>
+                                                            )}
                                                         </div>
 
-                                                        <div className="md:col-span-2 flex items-center justify-end gap-2 pt-2">
-                                                            <div className="text-right mr-2">
-                                                                <p className="text-[10px] text-slate-400 font-bold uppercase">Subtotal</p>
-                                                                <p className="font-bold text-slate-800">${((selectedProd?.price || 0) * (watchedProducts[index]?.quantity || 0)).toLocaleString()}</p>
+                                                        <div className="md:col-span-3 flex items-center justify-between gap-2 pt-6 pl-4 border-l border-slate-100/50">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none mb-1">Subtotal</span>
+                                                                <p className="text-lg font-black leading-none">
+                                                                    ${((selectedProd?.price || 0) * (watchedProducts[index]?.quantity || 0)).toLocaleString()}
+                                                                </p>
                                                             </div>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => remove(index)}
-                                                                className="p-2 text-slate-300 hover:text-red-500 hover:bg-white rounded-xl transition-all shadow-none hover:shadow-sm"
+                                                                className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shadow-none hover:shadow-sm"
                                                                 disabled={fields.length === 1}
+                                                                title="Remove Item"
                                                             >
                                                                 <Trash2 size={18} />
                                                             </button>

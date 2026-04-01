@@ -43,6 +43,7 @@ const Categories = () => {
     const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [editingCategory, setEditingCategory] = useState<any>(null);
 
     const {
@@ -100,6 +101,7 @@ const Categories = () => {
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleEdit = (category: any) => {
         setEditingCategory(category);
         setValue("name", category.name);

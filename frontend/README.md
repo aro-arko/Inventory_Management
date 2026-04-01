@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 Elite Inventory Dashboard
 
-## Getting Started
+A state-of-the-art **Inventory Management System** built with **Next.js 15**, **React 19**, and **Tailwind CSS 4**. This frontend provides a seamless, high-performance experience for tracking analytics, managing fulfillment workflows, and maintaining stock health.
 
-First, run the development server:
+---
 
+## 🛠️ Tech Stack
+
+- **Core**: Next.js 15 (App Router), React 19, TypeScript
+- **Styling**: Tailwind CSS 4, Radix UI (Manual Shadcn integration)
+- **Forms & Validation**: React Hook Form, Zod
+- **Icons & UI**: Lucide React, Sonner (Toasts)
+- **State Management**: React Hooks (UseState, UseMemo)
+- **Data Fetching**: Native Fetch API with Service Layering
+
+---
+
+## ✨ Key Features
+
+### 📊 Intelligent Dashboard
+- **Real-time Analytics**: Visual tracks for Daily Orders and Revenue using dynamic charting.
+- **Stock Health Insights**: Immediate visibility into Low Stock and Out of Stock critical items.
+- **Recent Activity Logic**: Live Feed of system logs and fulfillment actions.
+
+### 📦 Seamless Order Fulfillment
+- **Integrated Expansion**: A custom table sub-row system for order details. Clicking "Items" expands the row to show a full-width fulfillment summary.
+- **Scroll-Free UI**: Auto-expanding layouts ensure all product data is visible at a glance.
+- **Fulfillment States**: Full workflow management: *Pending -> Confirmed -> Shipped -> Delivered*.
+
+### 🔄 Dynamic Inventory & Restock
+- **Smart Queue**: Automatically identifies items falling below minimum thresholds.
+- **Restock Workflow**: Direct action from the restock queue to replenish inventory levels.
+- **Soft Deletion**: Robust data management for Categories and Products.
+
+### 🔐 Secure Authentication
+- **JWT Protection**: Secure session management for all dashboard routes.
+- **Account Actions**: Interactive user profile menu with "Change Password" functionality.
+- **Demo Guard**: Built-in protections to maintain the integrity of the shared demo account.
+
+---
+
+## 🌐 Production API
+
+This frontend is integrated with the **Elite Inventory Production API**:
+> **API URL**: `https://eliteintventoryserver.vercel.app/api/v1`
+
+---
+
+## 🚀 Getting Started
+
+### 1️⃣ Clone the Repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd frontend
 ```
 
+### 2️⃣ Install Dependencies
+```bash
+npm install
+```
+
+### 3️⃣ Environment Configuration
+Create a `.env` or `.env.local` file in the root directory:
+```env
+NEXT_PUBLIC_BASE_API=https://eliteintventoryserver.vercel.app/api/v1
+```
+
+### 4️⃣ Launch Development Server
+```bash
+npm run dev
+```
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📂 Project Structure
 
-## Learn More
+- `src/app/`: Next.js App Router and page layouts.
+- `src/components/`: Modular UI components (Dashboard, Orders, Products, etc.).
+- `src/services/`: Centralized API service layer for all backend communications.
+- `src/types/`: TypeScript interfaces and Zod validation schemas.
+- `src/lib/`: Shared utilities and tailwind configurations.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📝 License
+This project is licensed under the MIT License.
