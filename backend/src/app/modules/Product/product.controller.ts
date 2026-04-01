@@ -4,7 +4,11 @@ import sendResponse from '../../utils/sendResponse';
 import { ProductServices } from './product.service';
 
 const createProduct = catchAsync(async (req, res) => {
-  const result = await ProductServices.createProductIntoDB(req.body);
+  const { userId } = req.user;
+  const result = await ProductServices.createProductIntoDB({
+    ...req.body,
+    userId,
+  });
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -15,7 +19,8 @@ const createProduct = catchAsync(async (req, res) => {
 });
 
 const getAllProducts = catchAsync(async (req, res) => {
-  const result = await ProductServices.getAllProductsFromDB(req.query);
+  const { userId } = req.user;
+  const result = await ProductServices.getAllProductsFromDB(userId, req.query);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -25,8 +30,22 @@ const getAllProducts = catchAsync(async (req, res) => {
   });
 });
 
+const updateProduct = catchAsync(async (req, res) => {
+  const { userId } = req.user;
+  const id = req.params.id as string;
+  const result = await ProductServices.updateProductInDB(userId, id, req.body);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Product updated successfully',
+    data: result,
+  });
+});
+
 const getRestockQueue = catchAsync(async (req, res) => {
-  const result = await ProductServices.getRestockQueueFromDB();
+  const { userId } = req.user;
+  const result = await ProductServices.getRestockQueueFromDB(userId);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -37,9 +56,10 @@ const getRestockQueue = catchAsync(async (req, res) => {
 });
 
 const restockProduct = catchAsync(async (req, res) => {
+  const { userId } = req.user;
   const id = req.params.id as string;
   const { quantityToAdd } = req.body;
-  const result = await ProductServices.restockProductInDB(id, quantityToAdd);
+  const result = await ProductServices.restockProductInDB(userId, id, quantityToAdd);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -52,6 +72,7 @@ const restockProduct = catchAsync(async (req, res) => {
 export const ProductControllers = {
   createProduct,
   getAllProducts,
+  updateProduct,
   getRestockQueue,
   restockProduct,
 };

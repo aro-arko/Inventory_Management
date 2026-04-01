@@ -16,4 +16,6 @@ router.post(
 
 router.get('/', auth(USER_ROLE.admin, USER_ROLE.manager), CategoryControllers.getAllCategories);
 
+router.patch('/:id', auth(USER_ROLE.admin, USER_ROLE.manager), validateRequest(CategoryValidations.updateCategoryValidationSchema), CategoryControllers.updateCategory);
+
 export const CategoryRoutes = router;

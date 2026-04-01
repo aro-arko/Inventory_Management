@@ -7,7 +7,7 @@ import { ActivityLogService } from '../ActivityLog/activityLog.service';
 import QueryBuilder from '../../builder/QueryBuilder';
 
 
-const createOrderIntoDB = async (payload: Partial<TOrder>) => {
+const createOrderIntoDB = async (userId: string, payload: Partial<TOrder>) => {
   const { customerName, products, status } = payload;
 
   if (!products || products.length === 0) {
@@ -25,7 +25,7 @@ const createOrderIntoDB = async (payload: Partial<TOrder>) => {
     }
     processedProducts.add(productIdStr);
 
-    const productItem = await Product.findById(item.product);
+    const productItem = await Product.findOne({ _id: item.product, userId });
     if (!productItem) {
       throw new AppError(httpStatus.NOT_FOUND, `Product with ID ${item.product} not found`);
     }
@@ -62,28 +62,29 @@ const createOrderIntoDB = async (payload: Partial<TOrder>) => {
     await item.doc.save();
 
     if (dropsBelowThreshold) {
-      ActivityLogService.logAction(`Product "${item.doc.name}" added to Restock Queue`);
+      ActivityLogService.logAction(userId, `Product "${item.doc.name}" added to Restock Queue`);
     }
   }
 
   const result = await Order.create({
+    userId,
     customerName,
     products,
     totalPrice: calculatedTotalPrice,
     status: status || 'Pending',
   });
 
-  ActivityLogService.logAction(`Order #${result._id.toString().slice(-4)} created by user`);
+  ActivityLogService.logAction(userId, `Order #${result._id.toString().slice(-4)} created by user`);
 
   return result;
 };
 
-const updateOrderStatusInDB = async (id: string, status: string) => {
+const updateOrderStatusInDB = async (userId: string, id: string, status: string) => {
   if (status === 'Cancelled') {
     throw new AppError(httpStatus.BAD_REQUEST, 'Please use the cancel order endpoint to cancel an order and restore stock');
   }
 
-  const order = await Order.findById(id);
+  const order = await Order.findOne({ _id: id, userId });
   if (!order) {
     throw new AppError(httpStatus.NOT_FOUND, 'Order not found');
   }
@@ -92,7 +93,7 @@ const updateOrderStatusInDB = async (id: string, status: string) => {
     const productDocs = [];
 
     for (const item of order.products) {
-      const productItem = await Product.findById(item.product);
+      const productItem = await Product.findOne({ _id: item.product, userId });
       if (!productItem) {
         throw new AppError(httpStatus.NOT_FOUND, `Product with ID ${item.product} not found`);
       }
@@ -125,13 +126,13 @@ const updateOrderStatusInDB = async (id: string, status: string) => {
   order.status = status as 'Pending' | 'Confirmed' | 'Shipped' | 'Delivered' | 'Cancelled';
   await order.save();
 
-  ActivityLogService.logAction(`Order #${order._id.toString().slice(-4)} marked as ${status}`);
+  ActivityLogService.logAction(userId, `Order #${order._id.toString().slice(-4)} marked as ${status}`);
 
   return order;
 };
 
-const cancelOrderInDB = async (id: string) => {
-  const order = await Order.findById(id);
+const cancelOrderInDB = async (userId: string, id: string) => {
+  const order = await Order.findOne({ _id: id, userId });
 
   if (!order) {
     throw new AppError(httpStatus.NOT_FOUND, 'Order not found');
@@ -142,7 +143,7 @@ const cancelOrderInDB = async (id: string) => {
   }
 
   for (const item of order.products) {
-    const productItem = await Product.findById(item.product);
+    const productItem = await Product.findOne({ _id: item.product, userId });
     if (productItem) {
       productItem.stockQuantity += item.quantity;
       if (productItem.status === 'Out of Stock' && productItem.stockQuantity > 0) {
@@ -155,14 +156,14 @@ const cancelOrderInDB = async (id: string) => {
   order.status = 'Cancelled';
   await order.save();
 
-  ActivityLogService.logAction(`Order #${order._id.toString().slice(-4)} cancelled`);
+  ActivityLogService.logAction(userId, `Order #${order._id.toString().slice(-4)} cancelled`);
 
   return order;
 };
 
 
-const getAllOrdersFromDB = async (query: Record<string, unknown>) => {
-  const baseFilter: Record<string, unknown> = { isDeleted: false };
+const getAllOrdersFromDB = async (userId: string, query: Record<string, unknown>) => {
+  const baseFilter: Record<string, unknown> = { userId, isDeleted: false };
 
   if (query.date && typeof query.date === 'string') {
     const startDate = new Date(query.date);

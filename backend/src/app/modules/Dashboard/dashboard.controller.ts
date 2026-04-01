@@ -4,7 +4,8 @@ import sendResponse from '../../utils/sendResponse';
 import { DashboardServices } from './dashboard.service';
 
 const getDashboardStats = catchAsync(async (req, res) => {
-  const result = await DashboardServices.getDashboardStatsFromDB();
+  const { userId } = req.user;
+  const result = await DashboardServices.getDashboardStatsFromDB(userId);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

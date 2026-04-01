@@ -16,6 +16,8 @@ router.post(
 
 router.get('/', auth(USER_ROLE.admin, USER_ROLE.manager), ProductControllers.getAllProducts);
 
+router.patch('/:id', auth(USER_ROLE.admin, USER_ROLE.manager), validateRequest(ProductValidations.updateProductValidationSchema), ProductControllers.updateProduct);
+
 router.get('/restock-queue', auth(USER_ROLE.admin, USER_ROLE.manager), ProductControllers.getRestockQueue);
 
 router.patch(

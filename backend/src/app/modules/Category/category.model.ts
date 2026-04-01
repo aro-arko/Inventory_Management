@@ -3,10 +3,14 @@ import { TCategory } from './category.interface';
 
 const categorySchema = new Schema<TCategory>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     name: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
     isDeleted: {
@@ -19,5 +23,7 @@ const categorySchema = new Schema<TCategory>(
     versionKey: false,
   },
 );
+
+categorySchema.index({ name: 1, userId: 1 }, { unique: true });
 
 export const Category = model<TCategory>('Category', categorySchema);

@@ -16,6 +16,11 @@ const orderProductSchema = new Schema<TOrderProduct>({
 
 const orderSchema = new Schema<TOrder>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     customerName: {
       type: String,
       required: true,

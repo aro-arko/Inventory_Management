@@ -4,7 +4,11 @@ import sendResponse from '../../utils/sendResponse';
 import { CategoryServices } from './category.service';
 
 const createCategory = catchAsync(async (req, res) => {
-  const result = await CategoryServices.createCategoryIntoDB(req.body);
+  const { userId } = req.user;
+  const result = await CategoryServices.createCategoryIntoDB({
+    ...req.body,
+    userId,
+  });
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -15,7 +19,8 @@ const createCategory = catchAsync(async (req, res) => {
 });
 
 const getAllCategories = catchAsync(async (req, res) => {
-  const result = await CategoryServices.getAllCategoriesFromDB();
+  const { userId } = req.user;
+  const result = await CategoryServices.getAllCategoriesFromDB(userId);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -25,7 +30,21 @@ const getAllCategories = catchAsync(async (req, res) => {
   });
 });
 
+const updateCategory = catchAsync(async (req, res) => {
+  const { userId } = req.user;
+  const id = req.params.id as string;
+  const result = await CategoryServices.updateCategoryInDB(userId, id, req.body);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Category updated successfully',
+    data: result,
+  });
+});
+
 export const CategoryControllers = {
   createCategory,
   getAllCategories,
+  updateCategory,
 };

@@ -1,8 +1,10 @@
+import { Types } from 'mongoose';
 import { Order } from '../Order/order.model';
 import { Product } from '../Product/product.model';
 import { ActivityLog } from '../ActivityLog/activityLog.model';
 
-const getDashboardStatsFromDB = async () => {
+const getDashboardStatsFromDB = async (userId: string) => {
+  const userObjectId = new Types.ObjectId(userId);
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
@@ -13,10 +15,11 @@ const getDashboardStatsFromDB = async () => {
   startOf7DaysAgo.setDate(startOf7DaysAgo.getDate() - 6);
   startOf7DaysAgo.setHours(0, 0, 0, 0);
 
-  const [ordersTodayStats, orderStatusCounts, lowStockCount, productsList, recentLogDocs, chartAggregation] = await Promise.all([
+  const [ordersTodayStats, orderStatusCounts, lowStockCount, productsList, recentLogDocs, chartAggregation, totalActiveProducts] = await Promise.all([
     Order.aggregate([
       {
         $match: {
+          userId: userObjectId,
           createdAt: { $gte: startOfToday, $lte: endOfToday },
           isDeleted: false
         }
@@ -33,7 +36,7 @@ const getDashboardStatsFromDB = async () => {
     ]),
 
     Order.aggregate([
-      { $match: { isDeleted: false } },
+      { $match: { userId: userObjectId, isDeleted: false } },
       {
         $group: {
           _id: '$status',
@@ -43,17 +46,19 @@ const getDashboardStatsFromDB = async () => {
     ]),
 
     Product.countDocuments({
+      userId,
       isDeleted: false,
       $expr: { $lt: ['$stockQuantity', '$minimumStockThreshold'] }
     }),
 
-    Product.find({ isDeleted: false }).sort({ stockQuantity: 1 }).limit(10),
+    Product.find({ userId, isDeleted: false }).sort({ stockQuantity: 1 }).limit(10),
 
-    ActivityLog.find().sort('-createdAt').limit(10),
+    ActivityLog.find({ userId }).sort('-createdAt').limit(5),
 
     Order.aggregate([
       {
         $match: {
+          userId: userObjectId,
           createdAt: { $gte: startOf7DaysAgo, $lte: endOfToday },
           isDeleted: false
         }
@@ -68,7 +73,8 @@ const getDashboardStatsFromDB = async () => {
         }
       },
       { $sort: { _id: 1 } }
-    ])
+    ]),
+    Product.countDocuments({ userId, isDeleted: false })
   ]);
 
   const totalOrdersToday = ordersTodayStats.length > 0 ? ordersTodayStats[0].totalOrders : 0;
@@ -119,6 +125,7 @@ const getDashboardStatsFromDB = async () => {
     revenueToday,
     pendingVsCompleted,
     lowStockItemsCount: lowStockCount,
+    totalProductsCount: totalActiveProducts,
     productSummary,
     recentActivities,
     chartData

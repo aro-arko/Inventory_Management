@@ -5,7 +5,6 @@ import httpStatus from 'http-status';
 
 const registerUser = catchAsync(async (req, res) => {
   const userData = req.body;
-  console.log(userData);
 
   const result = await authServices.createUserIntoDB(userData);
 

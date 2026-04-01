@@ -4,7 +4,8 @@ import sendResponse from '../../utils/sendResponse';
 import { OrderServices } from './order.service';
 
 const createOrder = catchAsync(async (req, res) => {
-  const result = await OrderServices.createOrderIntoDB(req.body);
+  const { userId } = req.user;
+  const result = await OrderServices.createOrderIntoDB(userId, req.body);
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -15,9 +16,10 @@ const createOrder = catchAsync(async (req, res) => {
 });
 
 const updateOrderStatus = catchAsync(async (req, res) => {
+  const { userId } = req.user;
   const id = req.params.id as string;
   const { status } = req.body;
-  const result = await OrderServices.updateOrderStatusInDB(id, status);
+  const result = await OrderServices.updateOrderStatusInDB(userId, id, status);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -28,8 +30,9 @@ const updateOrderStatus = catchAsync(async (req, res) => {
 });
 
 const cancelOrder = catchAsync(async (req, res) => {
+  const { userId } = req.user;
   const id = req.params.id as string;
-  const result = await OrderServices.cancelOrderInDB(id);
+  const result = await OrderServices.cancelOrderInDB(userId, id);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -40,7 +43,8 @@ const cancelOrder = catchAsync(async (req, res) => {
 });
 
 const getAllOrders = catchAsync(async (req, res) => {
-  const result = await OrderServices.getAllOrdersFromDB(req.query);
+  const { userId } = req.user;
+  const result = await OrderServices.getAllOrdersFromDB(userId, req.query);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

@@ -34,6 +34,7 @@ const loginUser = async (userData: Partial<TUser>) => {
 
   // jwt token generation
   const jwtPayload = {
+    userId: (user as any)._id,
     email: user.email,
     role: user.role,
   };

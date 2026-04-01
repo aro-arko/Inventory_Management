@@ -3,6 +3,11 @@ import { TActivityLog } from './activityLog.interface';
 
 const activityLogSchema = new Schema<TActivityLog>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     message: {
       type: String,
       required: true,

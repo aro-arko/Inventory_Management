@@ -6,6 +6,7 @@ export type TOrderProduct = {
 };
 
 export type TOrder = {
+  userId: Types.ObjectId;
   customerName: string;
   products: TOrderProduct[];
   totalPrice: number;
