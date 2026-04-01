@@ -1,7 +1,7 @@
 "use client";
 
-import { 
-    Tags, 
+import {
+    Tags,
     Edit2,
     Trash2
 } from "lucide-react";
