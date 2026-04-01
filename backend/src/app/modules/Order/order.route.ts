@@ -16,6 +16,8 @@ router.post(
 
 router.get('/', auth(USER_ROLE.admin, USER_ROLE.manager), OrderControllers.getAllOrders);
 
+router.get('/:id', auth(USER_ROLE.admin, USER_ROLE.manager), OrderControllers.getOrderDetails);
+
 router.patch(
   '/:id/status',
   auth(USER_ROLE.admin, USER_ROLE.manager),

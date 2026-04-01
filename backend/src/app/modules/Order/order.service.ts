@@ -192,9 +192,20 @@ const getAllOrdersFromDB = async (userId: string, query: Record<string, unknown>
   return { meta, result };
 };
 
+const getOrderDetailsFromDB = async (userId: string, id: string) => {
+  const order = await Order.findOne({ _id: id, userId, isDeleted: false }).populate('products.product');
+
+  if (!order) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Order not found');
+  }
+
+  return order;
+};
+
 export const OrderServices = {
   createOrderIntoDB,
   updateOrderStatusInDB,
   cancelOrderInDB,
   getAllOrdersFromDB,
+  getOrderDetailsFromDB,
 };
