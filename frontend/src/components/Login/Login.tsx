@@ -11,6 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { loginUser } from "@/services/AuthService";
+import { useUser } from "@/context/UserContext";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const loginSchema = z.object({
     email: z.string().email("Please enter a valid email address"),
@@ -23,6 +27,8 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const { refreshUser } = useUser();
+    const router = useRouter();
 
     const {
         register,
@@ -40,9 +46,20 @@ const Login = () => {
 
     const onSubmit = async (data: LoginFormValues) => {
         setIsLoading(true);
-        console.log("Login data:", data);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        setIsLoading(false);
+        try {
+            const res = await loginUser(data);
+            if (res.success) {
+                toast.success(res.message);
+                await refreshUser();
+                router.push("/");
+            } else {
+                toast.error(res.message || "Invalid credentials");
+            }
+        } catch (error: any) {
+            toast.error(error.message || "An error occurred during login");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
